@@ -55,6 +55,9 @@
     <Reference Include="SignaturePad.Android">
       <HintPath>..\Components\signature-pad-1.2\lib\android\SignaturePad.Android.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.WindowsAzure.MobileServices.Android">
+      <HintPath>..\Components\azure-mobile-services-1.0.2\lib\android\Microsoft.WindowsAzure.MobileServices.Android.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\Dependencies\sqlite-net\src\SQLite.cs">
@@ -628,6 +631,11 @@
     <XamarinComponentReference Include="xamarin.mobile">
       <InstallationInProgress>False</InstallationInProgress>
       <Version>0.6.1</Version>
+      <Visible>False</Visible>
+    </XamarinComponentReference>
+    <XamarinComponentReference Include="azure-mobile-services">
+      <InstallationInProgress>True</InstallationInProgress>
+      <Version>1.0.2</Version>
       <Visible>False</Visible>
     </XamarinComponentReference>
   </ItemGroup>
