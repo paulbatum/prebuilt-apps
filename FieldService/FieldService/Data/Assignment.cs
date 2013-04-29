@@ -20,6 +20,27 @@ using System.Text;
 using FieldService.Utilities;
 
 namespace FieldService.Data {
+
+	public class AssignmentState
+	{
+		public int Id { get; set; }
+		public int AssignmentId { get; set; }
+		public string CompanyName { get; set; }
+		public string Status { get; set; }
+		public string UserId { get; set; }
+
+		public AssignmentState ()
+		{
+		}
+
+		public AssignmentState (Assignment assignment)
+		{
+			this.AssignmentId = assignment.Id;
+			this.CompanyName = assignment.CompanyName;
+			this.Status = assignment.Status.ToString ();
+		}
+	}
+
     /// <summary>
     /// An assignment is the "thing" or "job" the user is going to work on
     /// </summary>

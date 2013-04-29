@@ -19,14 +19,17 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using FieldService.Utilities;
+using Microsoft.WindowsAzure.MobileServices;
+using System.Configuration;
 
 namespace FieldService.Data {
     public class SampleAssignmentService : IAssignmentService {
         private List<Document> _documents;
 
-        public Task<List<Assignment>> GetAssignmentsAsync (CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<List<Assignment>> GetAssignmentsAsync (CancellationToken cancellationToken = default(CancellationToken))
         {
-            return Database.GetConnection (cancellationToken)
+            var assignments = await Database.GetConnection (cancellationToken)
                 .QueryAsync<Assignment> (@"
                     select Assignment.*, 
                            (SELECT SUM(Labor.Ticks) FROM Labor WHERE Assignment.Id = Labor.AssignmentId) as TotalTicks,       
@@ -36,6 +39,25 @@ namespace FieldService.Data {
                     where Assignment.Status != ? and Assignment.Status !=?
                     order by Assignment.Status DESC, Assignment.Priority
                 ", AssignmentStatus.Declined, AssignmentStatus.Complete);
+
+			try
+			{
+				var client = ServiceContainer.Resolve<MobileServiceClient>();
+				var assignmentStateTable = client.GetTable<AssignmentState>();
+				var states = await assignmentStateTable.ReadAsync();
+
+				foreach(var state in states) {
+					var assignment = assignments.Single(a => a.Id == state.AssignmentId);
+					assignment.Status = (AssignmentStatus) Enum.Parse(typeof(AssignmentStatus), state.Status);
+
+					if(state.UserId != client.CurrentUser.UserId && assignment.Status != AssignmentStatus.Declined)
+						assignments.Remove (assignment);
+				}
+			}
+			catch(Exception ex) { Console.WriteLine(ex); }
+
+
+			return assignments;
         }
 
         public Task<List<Item>> GetItemsAsync (CancellationToken cancellationToken = default(CancellationToken))
@@ -87,11 +109,19 @@ namespace FieldService.Data {
                 .ToListAsync ();
         }
 
-        public Task<int> SaveAssignmentAsync (Assignment assignment, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<int> SaveAssignmentAsync (Assignment assignment, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return Database.GetConnection (cancellationToken)
+            var id = await Database.GetConnection (cancellationToken)
                 .UpdateAsync (assignment);
-        }
+
+			var client = ServiceContainer.Resolve<MobileServiceClient>();
+			var assignmentStateTable = client.GetTable<AssignmentState>();
+			var state = new AssignmentState(assignment);
+			await assignmentStateTable.InsertAsync(state);
+
+
+			return id;
+        }	
 
         public Task<int> SaveSignatureAsync (Signature signature, CancellationToken cancellationToken = default(CancellationToken))
         {

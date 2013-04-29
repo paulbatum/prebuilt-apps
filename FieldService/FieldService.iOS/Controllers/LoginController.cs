@@ -19,6 +19,8 @@ using MonoTouch.UIKit;
 using FieldService.ViewModels;
 using FieldService.Data;
 using FieldService.Utilities;
+using Microsoft.WindowsAzure.MobileServices;
+using MonoTouch.Security;
 
 namespace FieldService.iOS
 {
@@ -103,6 +105,11 @@ namespace FieldService.iOS
 				}
 				return false;
 			};
+
+			username.Hidden = true;
+			password.Hidden = true;
+			login.Enabled = true;
+
 		}
 
 		public override void ViewWillAppear (bool animated)
@@ -120,19 +127,44 @@ namespace FieldService.iOS
 
 		partial void Login ()
 		{
-			//Dismiss the keyboard
-			username.ResignFirstResponder ();
-			password.ResignFirstResponder ();
-			
-			loginViewModel
-				.LoginAsync ()
-				.ContinueWith (_ => 
-					BeginInvokeOnMainThread (() => {
-						if (tabController == null)
-							tabController = Storyboard.InstantiateViewController<TabController>();
+			LoginAsync();
+		}
 
-						Theme.TransitionController(tabController);
-					}));
+		private async void LoginAsync ()
+		{
+			var client = ServiceContainer.Resolve<MobileServiceClient> ();
+
+			var queryRecord = new SecRecord(SecKind.InternetPassword) { Server = client.ApplicationUri.ToString() };
+			SecStatusCode queryResult;
+			var foundRecord = SecKeyChain.QueryAsRecord(queryRecord, out queryResult);
+			if(queryResult == SecStatusCode.Success) {
+				client.CurrentUser = new MobileServiceUser(foundRecord.Account);
+				client.CurrentUser.MobileServiceAuthenticationToken = NSString.FromData(foundRecord.ValueData, NSStringEncoding.UTF8);
+			} else {
+				var user = await client.LoginAsync(this, MobileServiceAuthenticationProvider.Twitter);
+				
+				var tokenRecord  = new SecRecord(SecKind.InternetPassword) { 
+					Server = client.ApplicationUri.ToString (),
+					Account = user.UserId,
+					ValueData = NSData.FromString(user.MobileServiceAuthenticationToken, NSStringEncoding.UTF8) 
+				};
+				
+				var code = SecKeyChain.Add(tokenRecord);
+				if(code != SecStatusCode.Success) {
+					throw new Exception("Unable to save token!");           
+				}
+			}
+
+			if(AppDelegate.DeviceToken != null) {
+				var deviceTable = client.GetTable<Device>();
+				var device = new Device { Token = AppDelegate.DeviceToken };
+				await deviceTable.InsertAsync(device);
+			}
+
+			if (tabController == null)
+				tabController = Storyboard.InstantiateViewController<TabController> ();
+					
+			Theme.TransitionController (tabController);
 		}
 
 		partial void Help ()

@@ -20,6 +20,7 @@ using System.Text;
 using FieldService.Data;
 using FieldService.Utilities;
 using FieldService.ViewModels;
+using Microsoft.WindowsAzure.MobileServices;
 
 namespace FieldService {
     /// <summary>
@@ -35,6 +36,10 @@ namespace FieldService {
             ServiceContainer.Register<ILoginService> (() => new SampleLoginService ());
             ServiceContainer.Register<IAssignmentService> (() => new SampleAssignmentService ());
 
+			ServiceContainer.Register<MobileServiceClient>(new MobileServiceClient(
+				"<your-mobile-service-url>",
+				"<your-mobile-service-application-key>"
+				));
 #if !NETFX_CORE
             //Only do these on iOS or Android
             ServiceContainer.Register<MenuViewModel> ();

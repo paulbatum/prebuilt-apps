@@ -24,6 +24,12 @@ using FieldService.ViewModels;
 
 namespace FieldService.iOS
 {
+	public class Device
+	{
+		public int Id { get; set; }
+		public string Token { get; set; }
+	}
+
 	/// <summary>
 	/// AppDelegate, the main callback for application-level events in iOS
 	/// </summary>
@@ -45,6 +51,7 @@ namespace FieldService.iOS
 			//Register some services
 			ServiceContainer.Register (window);
 			ServiceContainer.Register <ISynchronizeInvoke>(() => new SynchronizeInvoke());
+			application.RegisterForRemoteNotificationTypes(UIRemoteNotificationType.Alert | UIRemoteNotificationType.Sound);
 
 			//Apply our UI theme
 			Theme.Apply ();
@@ -57,6 +64,29 @@ namespace FieldService.iOS
 
 			return true;
 		}
+
+		public static string DeviceToken { get; set; }
+
+		public override void RegisteredForRemoteNotifications (UIApplication application, NSData deviceToken)
+		{	
+			DeviceToken = deviceToken.Description.Trim ('<', '>');
+			Console.WriteLine (DeviceToken);
+		}
+
+		public override void FailedToRegisterForRemoteNotifications (UIApplication application, NSError error)
+		{
+			Console.WriteLine (error);
+		}
+
+		public static event EventHandler PushReceived;
+
+		public override void ReceivedRemoteNotification (UIApplication application, NSDictionary userInfo)
+		{
+			if (PushReceived != null)
+				PushReceived (this, EventArgs.Empty);
+		}
+
+
 
 		/// <summary>
 		/// This is how orientation is setup on iOS 6

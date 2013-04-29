@@ -38,6 +38,10 @@ namespace FieldService.iOS
 
 			assignmentViewModel.HoursChanged += OnHoursChanged;;
 			assignmentViewModel.RecordingChanged += OnRecordingChanged;
+
+			AppDelegate.PushReceived += (object sender, EventArgs e) => {
+				BeginInvokeOnMainThread( () => ReloadAssignments());
+			};
 		}
 
 		private void OnHoursChanged (object sender, EventArgs e)
